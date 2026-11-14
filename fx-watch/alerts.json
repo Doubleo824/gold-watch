@@ -19,10 +19,11 @@
     {
       "id": "test-e2e",
       "direction": "up",
-      "targetPrice": 4.0,
+      "targetPrice": 4,
       "enabled": true,
       "note": "端到端测试，验证后删除",
-      "triggeredAt": null
+      "triggeredAt": "2026-11-14T12:20:21.475Z",
+      "triggeredPrice": 4.5193
     }
   ]
 }
