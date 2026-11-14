@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -42,7 +44,9 @@ jobs:
           git add gold-watch/alerts.json
           if git diff --staged --quiet; then
             echo "状态无变化"
-          else
-            git commit -m "chore: 更新金价提醒状态"
-            git push
+            exit 0
           fi
+          git commit -m "chore: 更新金价提醒状态"
+          # 另一个工作流可能同时提交，先变基再推送，避免互相覆盖
+          git pull --rebase origin main
+          git push

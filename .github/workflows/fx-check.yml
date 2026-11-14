@@ -1,0 +1,52 @@
+name: fx-check
+
+on:
+  schedule:
+    # 每 5 分钟检查一次（GitHub 调度可能有数分钟延迟）
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fx-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        working-directory: fx-watch
+        run: npm install --no-audit --no-fund
+
+      - name: 检查汇率并推送
+        working-directory: fx-watch
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: npm run check
+
+      - name: 回写提醒状态
+        run: |
+          git config user.name "fx-bot"
+          git config user.email "fx-bot@users.noreply.github.com"
+          git add fx-watch/alerts.json
+          if git diff --staged --quiet; then
+            echo "状态无变化"
+            exit 0
+          fi
+          git commit -m "chore: 更新澳元汇率提醒状态"
+          # 另一个工作流可能同时提交，先变基再推送，避免互相覆盖
+          git pull --rebase origin main
+          git push

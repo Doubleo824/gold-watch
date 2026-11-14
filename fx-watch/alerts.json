@@ -1,0 +1,20 @@
+{
+  "alerts": [
+    {
+      "id": "aud-low",
+      "direction": "down",
+      "targetPrice": 4.5,
+      "enabled": true,
+      "note": "澳元兑人民币跌破 4.5 时提醒",
+      "triggeredAt": null
+    },
+    {
+      "id": "aud-high",
+      "direction": "up",
+      "targetPrice": 4.85,
+      "enabled": true,
+      "note": "澳元兑人民币涨破 4.85 时提醒",
+      "triggeredAt": null
+    }
+  ]
+}
