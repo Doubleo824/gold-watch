@@ -77,14 +77,27 @@ function buildMailText(alert, quote) {
   return lines.join('\n');
 }
 
+/**
+ * 判断提醒当前是否处于监控状态
+ * 未触发过的直接监控；触发过的间隔满 24 小时后自动恢复监控
+ */
+const REARM_MS = 24 * 60 * 60 * 1000;
+
+function isWatching(alert) {
+  if (!alert.enabled) return false;
+  if (!alert.triggeredAt) return true;
+  const last = Date.parse(alert.triggeredAt);
+  if (!Number.isFinite(last)) return true;
+  return Date.now() - last >= REARM_MS;
+}
+
 async function main() {
   const state = JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
   const alerts = state.alerts || [];
 
-  // 只监控 enabled 且尚未触发的提醒
-  const pending = alerts.filter((a) => a.enabled && !a.triggeredAt);
+  const pending = alerts.filter(isWatching);
   if (pending.length === 0) {
-    console.log('没有待监控的提醒（enabled 且未触发），本次跳过');
+    console.log('没有待监控的提醒（未启用或 24 小时内已提醒过），本次跳过');
     return;
   }
 
