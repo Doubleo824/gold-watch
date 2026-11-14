@@ -19,10 +19,11 @@
     {
       "id": "test",
       "direction": "up",
-      "targetPrice": 4.0,
+      "targetPrice": 4,
       "enabled": true,
       "note": "临时测试：确认邮件能收到，测完请删除本条",
-      "triggeredAt": null
+      "triggeredAt": "2026-11-14T11:13:19.708Z",
+      "triggeredPrice": 4.5193
     }
   ]
 }
