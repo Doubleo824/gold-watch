@@ -1,6 +1,6 @@
 # gold-watch 金价与汇率到价提醒
 
-零成本的价格监控提醒工具：GitHub Actions 每 5 分钟拉取一次行情，命中阈值后通过 QQ 邮箱推送提醒。
+零成本的价格监控提醒工具：腾讯云函数每 5 分钟唤醒 GitHub Actions 拉取行情，命中阈值后通过 QQ 邮箱推送提醒。
 
 目前监控两类标的：
 
@@ -19,12 +19,19 @@
 ## 工作原理
 
 ```
-GitHub Actions（每 5 分钟，金价与汇率各一个任务）
+腾讯云函数 SCF（定时触发器，每 5 分钟）
+   ↓ 调用 GitHub API（workflow_dispatch）
+GitHub Actions（金价、汇率各一个任务）
    ↓ 拉取行情
    ↓ 读取 alerts.json 里的阈值
    ↓ 命中 → 发邮件
    ↓ 写回 triggeredAt 并自动提交到仓库
 ```
+
+**实际执行者是腾讯云函数**，它每 5 分钟主动唤醒 GitHub Actions。所以：
+
+- 本机 Mac 关机、不打开 GitHub 都不影响
+- 不依赖 GitHub 自己的 cron 调度，也就**不受「仓库 60 天无提交停用定时任务」的规则影响**
 
 ## 目录结构
 
@@ -39,6 +46,7 @@ fx-watch/
   ├── alerts.json                  汇率提醒配置
   ├── src/check.js                 同上，行情源为 AUDCNY
   └── package.json                 依赖（nodemailer）
+scf/dispatch/index.js              腾讯云函数源码（定时调用 GitHub API）
 ```
 
 ## 怎么改阈值
@@ -131,8 +139,71 @@ git push
 
 ## 已知限制
 
-- **最小间隔 5 分钟**，且 GitHub 定时调度高峰期可能延迟几分钟，不是实时行情。
+- **最小间隔 5 分钟**，触发链路是腾讯云 → GitHub，命中后通常 10~30 秒内发信，不是实时行情。
 - **触发后每天最多提醒一次**（24 小时自动恢复的机制）。
-- **仓库 60 天无提交，定时任务会被自动停用**。到 Actions 页面点一次 Enable 即可恢复。
 - 行情来自新浪财经公开接口，免费但不保证长期可用；若失效需修改 `check.js` 中的 `QUOTE.code`。
 - 数据仅供参考，不构成投资建议。
+
+## 凭证与到期维护
+
+系统依赖两个凭证，性质不同：
+
+| 凭证 | 存放位置 | 到期时间 | 失效表现 |
+|------|---------|---------|---------|
+| GitHub 令牌 | 腾讯云函数环境变量 `GH_TOKEN` | **2027-02-12** | 云函数返回 401，Actions 完全不再运行 |
+| QQ 邮箱授权码 | GitHub Secrets 的 `SMTP_PASS` | 无固定期限 | Actions 报 `Invalid login`，不发送邮件 |
+
+### 令牌过期后怎么换（2027-02-12 之前做一次）
+
+**1. 生成新令牌**
+
+打开 https://github.com/settings/personal-access-tokens/new
+
+| 项目 | 填写 |
+|------|------|
+| Token name | `cron-trigger-新日期`（随便起，别和旧的重复） |
+| Expiration | 选最长（约 1 年） |
+| Repository access | Only select repositories → 勾选 `gold-watch` |
+| Permissions | 点 `+ Add permissions` → 找 **Actions** → 选 **Read and write** → Add permissions |
+
+拉到底部点 **Generate token**，复制 `github_pat_` 开头那串（**只显示一次**，先存到备忘录）。
+
+**2. 更新腾讯云**
+
+腾讯云控制台 → 云函数 → `gold-watch-trigger` → **函数配置** → 环境变量 → 修改 `GH_TOKEN` 的值为新令牌 → 保存。
+
+**3. 验证**
+
+函数代码页 → 点 **测试**，返回下面这样即成功：
+
+```json
+{"ok":true,"results":["gold-check:204(...)","fx-check:204(...)"]}
+```
+
+看到 `204` 就说明换好了。最后回 GitHub 令牌列表把旧令牌 **Delete** 掉。
+
+### QQ 授权码失效后怎么换
+
+**1. 重新生成授权码**
+
+QQ 邮箱网页 → 设置 → 账户 → 「IMAP/SMTP 服务」→ 生成授权码（16 位，字母数字）。
+
+**2. 更新 Secrets**
+
+仓库 Settings → Secrets and variables → Actions → 点 `SMTP_PASS` 的 **Update** → 粘贴新授权码 → 保存。
+
+**3. 验证**
+
+Actions 页手动跑一次任一模，看日志是否出现 `已发送提醒邮件`。
+
+## 故障排查
+
+| 现象 | 原因 | 处理 |
+|------|------|------|
+| Actions 完全没有新运行 | 腾讯云定时器未运行 / 令牌失效 | 云函数「测试」看返回码 |
+| 云函数返回 `401` | 令牌无效、过期、复制不全 | 按上面「令牌过期后怎么换」重做 |
+| 云函数返回 `403` | 令牌缺少 Actions 写权限 | 重新生成，勾选 Actions: Read and write |
+| 云函数返回 `404` | 令牌没授权 `gold-watch` 仓库 | 重新生成，Repository access 勾上仓库 |
+| Actions 成功但没收到邮件 | 授权码失效或进了垃圾箱 | 检查 `SMTP_PASS`，翻垃圾邮件 |
+| 邮件延迟很久 | 腾讯云定时器被暂停 | 控制台确认触发器为「启用」状态 |
+| 配置文件出现冲突标记 `<<<<<<<` | 两个工作流同时提交 | 手工保留正确内容后提交 |
