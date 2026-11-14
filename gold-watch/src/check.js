@@ -3,7 +3,15 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 
 const STATE_PATH = path.join(__dirname, '..', 'alerts.json');
-const SINA_URL = 'https://hq.sinajs.cn/list=hf_GC';
+
+// 行情品种：上海黄金交易所 Au99.99（沪金99），单位 元/克
+const QUOTE = {
+  code: 'gds_AU9999',
+  name: '上海黄金交易所 Au99.99',
+  unit: '元/克',
+  symbol: '¥'
+};
+const SINA_URL = `https://hq.sinajs.cn/list=${QUOTE.code}`;
 
 function num(v) {
   const n = parseFloat(v);
@@ -11,8 +19,8 @@ function num(v) {
 }
 
 /**
- * 拉取国际现货黄金（XAU/USD）最新行情
- * 新浪 hf_GC 字段：0 最新价 / 4 最高 / 5 最低 / 6 时间 / 7 昨收 / 12 日期
+ * 拉取国内金价最新行情（Au99.99，元/克）
+ * 新浪 gds_ 字段：0 最新价 / 4 最高 / 5 最低 / 6 时间 / 7 昨收 / 12 日期
  */
 async function fetchPrice() {
   const res = await fetch(SINA_URL, {
@@ -51,11 +59,13 @@ async function fetchPrice() {
 
 function buildMailText(alert, quote) {
   const dirText = alert.direction === 'up' ? '向上突破' : '向下跌破';
+  const { symbol, unit, name } = QUOTE;
   const lines = [
     `你设置的金价提醒已触发（${dirText}）。`,
     '',
-    `当前金价：$${quote.price} 美元/盎司`,
-    `目标价格：$${alert.targetPrice}`,
+    `当前金价：${symbol}${quote.price} ${unit}`,
+    `品种：${name}`,
+    `目标价格：${symbol}${alert.targetPrice}`,
     `当日最高：${quote.high ?? '-'}　最低：${quote.low ?? '-'}`
   ];
   if (quote.change !== null) {
@@ -86,7 +96,7 @@ async function main() {
     return; // 不标记触发，下次重试
   }
   console.log(
-    `当前金价 $${quote.price}，涨跌 ${quote.change ?? '-'}，待监控 ${pending.length} 条`
+    `当前金价 ${QUOTE.symbol}${quote.price} ${QUOTE.unit}，涨跌 ${quote.change ?? '-'}，待监控 ${pending.length} 条`
   );
 
   const hitList = pending.filter((a) => {
@@ -118,7 +128,7 @@ async function main() {
   let changed = false;
 
   for (const alert of hitList) {
-    const subject = `[金价提醒] ${alert.direction === 'up' ? '涨到' : '跌到'} $${alert.targetPrice} 已触发`;
+    const subject = `[金价提醒] ${alert.direction === 'up' ? '涨到' : '跌到'} ${QUOTE.symbol}${alert.targetPrice} 已触发`;
     try {
       await transporter.sendMail({
         from: `金价提醒 <${user}>`,
