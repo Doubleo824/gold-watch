@@ -15,15 +15,6 @@
       "enabled": true,
       "note": "澳元兑人民币涨破 4.85 时提醒",
       "triggeredAt": null
-    },
-    {
-      "id": "test",
-      "direction": "up",
-      "targetPrice": 4,
-      "enabled": true,
-      "note": "临时测试：确认邮件能收到，测完请删除本条",
-      "triggeredAt": "2026-11-14T11:13:19.708Z",
-      "triggeredPrice": 4.5193
     }
   ]
 }
