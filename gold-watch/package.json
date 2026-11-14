@@ -1,0 +1,13 @@
+{
+  "name": "gold-watch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "金价到价提醒（GitHub Actions + 邮件，零成本）",
+  "main": "src/check.js",
+  "scripts": {
+    "check": "node src/check.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  }
+}

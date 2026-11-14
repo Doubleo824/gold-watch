@@ -1,0 +1,20 @@
+{
+  "alerts": [
+    {
+      "id": "a1",
+      "direction": "up",
+      "targetPrice": 4000,
+      "enabled": false,
+      "note": "示例：改成 enabled=true 即开始监控，涨到 4000 时发邮件",
+      "triggeredAt": null
+    },
+    {
+      "id": "a2",
+      "direction": "down",
+      "targetPrice": 3800,
+      "enabled": false,
+      "note": "示例：跌到 3800 时提醒",
+      "triggeredAt": null
+    }
+  ]
+}

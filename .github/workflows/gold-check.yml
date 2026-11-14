@@ -1,0 +1,48 @@
+name: gold-check
+
+on:
+  schedule:
+    # 每 5 分钟检查一次（GitHub 调度可能有数分钟延迟）
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gold-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        working-directory: gold-watch
+        run: npm install --no-audit --no-fund
+
+      - name: 检查金价并推送
+        working-directory: gold-watch
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: npm run check
+
+      - name: 回写提醒状态
+        run: |
+          git config user.name "gold-bot"
+          git config user.email "gold-bot@users.noreply.github.com"
+          git add gold-watch/alerts.json
+          if git diff --staged --quiet; then
+            echo "状态无变化"
+          else
+            git commit -m "chore: 更新金价提醒状态"
+            git push
+          fi
