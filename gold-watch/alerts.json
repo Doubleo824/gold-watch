@@ -15,6 +15,14 @@
       "enabled": true,
       "note": "国内金价涨破 1000 元/克时提醒",
       "triggeredAt": null
+    },
+    {
+      "id": "test",
+      "direction": "up",
+      "targetPrice": 500,
+      "enabled": true,
+      "note": "临时测试：确认邮件能收到，测完请删除本条",
+      "triggeredAt": null
     }
   ]
 }
