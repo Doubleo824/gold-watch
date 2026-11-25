@@ -6,8 +6,8 @@
       "targetPrice": 800,
       "enabled": true,
       "note": "国内金价跌破 800 元/克时提醒",
-      "triggeredAt": "2026-11-24T03:20:20.039Z",
-      "triggeredPrice": 781
+      "triggeredAt": "2026-11-25T03:25:16.807Z",
+      "triggeredPrice": 764
     },
     {
       "id": "a2",
