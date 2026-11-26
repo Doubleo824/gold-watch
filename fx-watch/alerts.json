@@ -6,8 +6,8 @@
       "targetPrice": 4.5,
       "enabled": true,
       "note": "澳元兑人民币跌破 4.5 时提醒",
-      "triggeredAt": "2026-11-25T10:10:20.760Z",
-      "triggeredPrice": 4.3818
+      "triggeredAt": "2026-11-26T10:15:25.622Z",
+      "triggeredPrice": 4.4144
     },
     {
       "id": "aud-high",
